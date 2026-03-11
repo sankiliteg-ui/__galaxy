@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#02000a">
+<title>✦ Annu ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Italiana&family=Josefin+Sans:wght@100;300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --gold:#e8c87a;--rose:#f08cba;--violet:#9d6fff;--ice:#a8d8ff;--deep:#02000a;
+  /* clamp values for responsive sizing */
+  --dp-main: clamp(130px, 28vw, 196px);
+  --dp-ring: clamp(140px, 30vw, 214px);
+  --dp-spin: clamp(144px, 31vw, 224px);
+  --solar-w: clamp(180px, 40vw, 260px);
+  --orbit1-w: clamp(250px, 54vw, 345px);
+  --orbit2-w: clamp(310px, 66vw, 430px);
+  --ring1-w:  clamp(220px, 48vw, 310px);
+  --ring2-w:  clamp(260px, 56vw, 355px);
+  --ring3-w:  clamp(290px, 62vw, 390px);
+  --odp1: clamp(30px, 6.5vw, 44px);
+  --odp2: clamp(26px, 5.5vw, 38px);
+}
+html,body{
+  width:100vw;height:100%;min-height:100vh;
+  overflow:hidden;background:var(--deep);
+  touch-action:none;
+  /* prevent overscroll bounce on Android */
+  overscroll-behavior:none;
+}
+/* hide cursor on touch devices */
+@media (hover:hover){ body{ cursor:none; } }
+@media (hover:none){  #cur,#cur2{ display:none; } }
+
+#three-canvas{position:fixed;inset:0;z-index:0;display:block;width:100%!important;height:100%!important;}
+
+#cur{position:fixed;z-index:9999;width:12px;height:12px;border-radius:50%;
+  background:#fff;pointer-events:none;transform:translate(-50%,-50%);mix-blend-mode:difference;}
+#cur2{position:fixed;z-index:9998;width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(168,216,255,.5);pointer-events:none;transform:translate(-50%,-50%);}
+
+#vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 28%,rgba(2,0,10,.94) 100%);}
+
+/* nebula - reduce blur on mobile for perf */
+.neb{position:fixed;border-radius:50%;pointer-events:none;z-index:2;
+  will-change:transform;animation:ndrift 28s ease-in-out infinite alternate;}
+.neb1{width:min(900px,160vw);height:min(600px,120vw);
+  background:radial-gradient(ellipse,rgba(80,20,160,.28),transparent 70%);
+  top:-20%;left:-15%;filter:blur(clamp(60px,10vw,120px));}
+.neb2{width:min(700px,130vw);height:min(700px,130vw);
+  background:radial-gradient(ellipse,rgba(20,60,180,.22),transparent 70%);
+  bottom:-25%;right:-10%;animation-delay:-10s;filter:blur(clamp(60px,10vw,120px));}
+.neb3{width:min(500px,90vw);height:min(350px,70vw);
+  background:radial-gradient(ellipse,rgba(180,40,100,.18),transparent 70%);
+  top:30%;right:5%;animation-delay:-18s;filter:blur(clamp(50px,8vw,100px));}
+.neb4{width:min(400px,80vw);height:min(400px,80vw);
+  background:radial-gradient(ellipse,rgba(30,160,160,.14),transparent 70%);
+  bottom:10%;left:10%;animation-delay:-6s;filter:blur(clamp(50px,8vw,100px));}
+@keyframes ndrift{0%{transform:scale(1) translate(0,0);}100%{transform:scale(1.12) translate(20px,18px);}}
+
+#dpfield{position:fixed;inset:0;z-index:3;pointer-events:none;}
+.dpbub{position:absolute;border-radius:50%;overflow:hidden;pointer-events:none;
+  will-change:transform,opacity;animation:dpfloat linear infinite;}
+.dpbub img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+@keyframes dpfloat{
+  0%{transform:translateY(0) translateX(0) scale(1);opacity:0;}
+  8%{opacity:var(--op);}
+  50%{transform:translateY(-42vh) translateX(var(--dx)) scale(1.05);}
+  92%{opacity:calc(var(--op)*.3);}
+  100%{transform:translateY(-90vh) translateX(calc(var(--dx)*1.7)) scale(.7);opacity:0;}
+}
+
+#sparklefield{position:fixed;inset:0;z-index:3;pointer-events:none;}
+.sparkle{position:absolute;border-radius:50%;pointer-events:none;
+  will-change:transform,opacity;animation:spkl linear infinite;}
+@keyframes spkl{
+  0%{opacity:0;transform:scale(0) translate(0,0);}
+  20%{opacity:1;transform:scale(1) translate(0,0);}
+  80%{opacity:.45;}
+  100%{opacity:0;transform:scale(.3) translate(calc(var(--vx)*1px),calc(var(--vy)*1px));}
+}
+
+/* ── CARD ── */
+#card{
+  position:fixed;z-index:10;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;
+  will-change:transform;
+  animation:cardin 2.2s cubic-bezier(.22,1,.36,1) both;
+  /* safe area padding for notch devices */
+  padding-top:env(safe-area-inset-top);
+}
+@keyframes cardin{
+  from{opacity:0;transform:translate(-50%,-44%) scale(.85);}
+  to{opacity:1;transform:translate(-50%,-50%) scale(1);}
+}
+
+/* ── SOLAR SYSTEM ── */
+.solar{
+  position:relative;
+  width:var(--solar-w);height:var(--solar-w);
+  margin-bottom:clamp(18px,4vw,36px);
+}
+
+/* Saturn rings */
+.sr{position:absolute;top:50%;left:50%;border-radius:50%;border-style:solid;
+  transform:translate(-50%,-50%) rotateX(72deg);pointer-events:none;}
+.sr1{
+  width:var(--ring1-w);height:var(--ring1-w);border-width:clamp(7px,1.5vw,12px);
+  border-color:rgba(232,200,122,.28);
+  box-shadow:0 0 14px rgba(232,200,122,.14),inset 0 0 8px rgba(232,200,122,.1);
+  animation:rpulse 6s ease-in-out infinite alternate;}
+.sr2{
+  width:var(--ring2-w);height:var(--ring2-w);border-width:clamp(3px,1vw,5px);
+  border-color:rgba(168,216,255,.17);
+  animation:rpulse 9s ease-in-out infinite alternate-reverse;}
+.sr3{
+  width:var(--ring3-w);height:var(--ring3-w);border-width:2px;
+  border-color:rgba(157,111,255,.1);
+  animation:rpulse 13s ease-in-out infinite alternate;}
+@keyframes rpulse{0%{opacity:.45;}100%{opacity:1;}}
+
+/* Conic spin */
+.spin-ring{
+  position:absolute;top:50%;left:50%;
+  width:var(--dp-spin);height:var(--dp-spin);
+  border-radius:50%;transform:translate(-50%,-50%);
+  background:conic-gradient(from 0deg,var(--gold),var(--rose),var(--violet),var(--ice),var(--gold));
+  animation:spin 5s linear infinite;filter:blur(1.5px);
+  will-change:transform;}
+@keyframes spin{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+.spin-mask{
+  position:absolute;top:50%;left:50%;
+  width:var(--dp-ring);height:var(--dp-ring);
+  border-radius:50%;
+  background:radial-gradient(circle,#070219 52%,#0d0528);
+  transform:translate(-50%,-50%);z-index:1;}
+
+/* Main DP */
+.main-dp{
+  position:absolute;top:50%;left:50%;
+  width:var(--dp-main);height:var(--dp-main);
+  border-radius:50%;object-fit:cover;
+  transform:translate(-50%,-50%);z-index:2;
+  box-shadow:0 0 0 3px rgba(232,200,122,.4),
+             0 0 40px rgba(157,111,255,.6),
+             0 0 80px rgba(157,111,255,.18);
+  transition:box-shadow .5s;}
+
+/* Orbit rings */
+.orbit{
+  position:absolute;top:50%;left:50%;
+  border-radius:50%;border:1px dashed rgba(255,255,255,.07);
+  transform:translate(-50%,-50%);
+  animation:ospin var(--dur) linear infinite;
+  will-change:transform;}
+.orbit1{width:var(--orbit1-w);height:var(--orbit1-w);--dur:14s;}
+.orbit2{width:var(--orbit2-w);height:var(--orbit2-w);--dur:22s;animation-direction:reverse;}
+@keyframes ospin{from{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+
+.o-dp{
+  position:absolute;border-radius:50%;object-fit:cover;
+  border:2px solid rgba(255,255,255,.28);
+  animation:octr var(--dur) linear infinite;
+  box-shadow:0 0 12px 3px rgba(157,111,255,.4);
+  will-change:transform;}
+.orbit1 .o-dp{--dur:14s;width:var(--odp1);height:var(--odp1);}
+.orbit2 .o-dp{--dur:22s;width:var(--odp2);height:var(--odp2);animation-direction:reverse;}
+@keyframes octr{from{transform:rotate(0)}to{transform:rotate(-360deg)}}
+
+/* orbit positions using CSS calc with var */
+.orbit1 .o-dp:nth-child(1){top:calc(var(--odp1)/-2);left:calc(50% - var(--odp1)/2);}
+.orbit1 .o-dp:nth-child(2){top:calc(50% - var(--odp1)/2);right:calc(var(--odp1)/-2);}
+.orbit1 .o-dp:nth-child(3){bottom:calc(var(--odp1)/-2);left:calc(50% - var(--odp1)/2);}
+.orbit1 .o-dp:nth-child(4){top:calc(50% - var(--odp1)/2);left:calc(var(--odp1)/-2);}
+.orbit2 .o-dp:nth-child(1){top:calc(var(--odp2)/-2);left:calc(50% - var(--odp2)/2);}
+.orbit2 .o-dp:nth-child(2){top:calc(50% - var(--odp2)/2);right:calc(var(--odp2)/-2);}
+.orbit2 .o-dp:nth-child(3){bottom:calc(var(--odp2)/-2);left:calc(50% - var(--odp2)/2);}
+.orbit2 .o-dp:nth-child(4){top:calc(50% - var(--odp2)/2);left:calc(var(--odp2)/-2);}
+
+/* ── NAME ── */
+.name{
+  font-family:'Italiana',serif;
+  font-size:clamp(3.4rem,14vw,8rem);
+  font-weight:400;
+  letter-spacing:clamp(.1em,.5vw,.22em);
+  line-height:1;
+  margin-bottom:4px;
+  background:linear-gradient(120deg,#e8c87a 0%,#faf0d0 22%,#f08cba 48%,#c89bff 72%,#a8d8ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  background-size:200% auto;
+  animation:nameshine 5s linear infinite,nameglow 4s ease-in-out infinite alternate;
+}
+@keyframes nameshine{0%{background-position:0%}100%{background-position:200%}}
+@keyframes nameglow{
+  0%{filter:drop-shadow(0 0 18px rgba(232,200,122,.4)) drop-shadow(0 0 45px rgba(157,111,255,.2));}
+  100%{filter:drop-shadow(0 0 32px rgba(240,140,186,.6)) drop-shadow(0 0 75px rgba(168,216,255,.28));}
+}
+
+.divider{display:flex;align-items:center;gap:10px;
+  margin:clamp(8px,2vw,14px) 0;width:100%;justify-content:center;}
+.divider::before,.divider::after{content:'';flex:1;max-width:70px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(168,216,255,.38),transparent);}
+.div-text{font-family:'Josefin Sans',sans-serif;font-weight:100;
+  font-size:clamp(.55rem,2.2vw,.68rem);
+  letter-spacing:.35em;color:rgba(168,216,255,.58);text-transform:uppercase;}
+
+.tagline{font-family:'Josefin Sans',sans-serif;font-weight:100;
+  font-size:clamp(.55rem,2.5vw,.85rem);
+  letter-spacing:clamp(.18em,.5vw,.32em);
+  text-transform:uppercase;color:rgba(200,180,255,.48);
+  text-align:center;line-height:2;margin-bottom:2px;}
+
+.glyphs{display:flex;gap:clamp(12px,3.5vw,24px);margin-top:clamp(10px,2.5vw,16px);opacity:.52;}
+.glyph{font-size:clamp(.8rem,2.5vw,1.05rem);animation:gfloat 4s ease-in-out infinite alternate;}
+.glyph:nth-child(1){color:rgba(232,200,122,.9);}
+.glyph:nth-child(2){color:rgba(240,140,186,.9);animation-delay:.7s;}
+.glyph:nth-child(3){color:rgba(157,111,255,.9);animation-delay:1.4s;}
+.glyph:nth-child(4){color:rgba(168,216,255,.9);animation-delay:2.1s;}
+.glyph:nth-child(5){color:rgba(232,200,122,.9);animation-delay:2.8s;}
+@keyframes gfloat{0%{transform:translateY(0) scale(1);}100%{transform:translateY(-6px) scale(1.18);}}
+
+/* ── HUD ── */
+#snd{
+  position:fixed;bottom:max(24px,env(safe-area-inset-bottom,24px));
+  right:24px;z-index:100;
+  width:clamp(42px,10vw,48px);height:clamp(42px,10vw,48px);
+  border-radius:50%;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.18);
+  color:#fff;font-size:clamp(1rem,3vw,1.2rem);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:all .3s;box-shadow:0 0 20px rgba(157,111,255,.3);}
+#snd:hover,#snd:active{transform:scale(1.1);box-shadow:0 0 32px rgba(157,111,255,.6);}
+
+#datebadge{
+  position:fixed;
+  bottom:max(24px,env(safe-area-inset-bottom,24px));
+  left:24px;z-index:100;
+  font-family:'Josefin Sans',sans-serif;font-weight:100;
+  font-size:clamp(.52rem,2vw,.62rem);
+  letter-spacing:.22em;color:rgba(168,216,255,.3);text-transform:uppercase;}
+
+.cspark{position:fixed;z-index:50;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);}
+
+/* reduce motion for accessibility */
+@media(prefers-reduced-motion:reduce){
+  .neb,.orbit,.o-dp,.spin-ring,.dpbub,.sparkle,.glyph{animation-duration:.01ms!important;}
+}
+</style>
+</head>
+<body>
+<div id="cur"></div>
+<div id="cur2"></div>
+<canvas id="three-canvas"></canvas>
+<div id="vignette"></div>
+<div class="neb neb1"></div>
+<div class="neb neb2"></div>
+<div class="neb neb3"></div>
+<div class="neb neb4"></div>
+<div id="dpfield"></div>
+<div id="sparklefield"></div>
+<button id="snd">🔊</button>
+<div id="datebadge"></div>
+
+<div id="card">
+  <div class="solar">
+    <div class="sr sr3"></div>
+    <div class="sr sr2"></div>
+    <div class="sr sr1"></div>
+    <div class="orbit orbit2">
+      <img class="o-dp" src="annuuu.jpeg"  alt="" loading="lazy">
+      <img class="o-dp" src="annuuu.jpeg" alt="" loading="lazy">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+    </div>
+    <div class="orbit orbit1">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+      <img class="o-dp" src="ann_insta.jpeg" alt="" loading="lazy">
+    </div>
+    <div class="spin-ring"></div>
+    <div class="spin-mask"></div>
+    <!-- ★ Replace this src with your own photo URL ★ -->
+    <img class="main-dp" src="ann_insta.jpeg" alt="Annu">
+  </div>
+
+  <h1 class="name">Annu</h1>
+  <div class="divider">
+    <span class="div-text">✦ &nbsp; stardust soul &nbsp; ✦</span>
+  </div>
+  <p class="tagline">
+    born in a galaxy far, far away<br>
+    carrying entire universes within
+  </p>
+  <div class="glyphs">
+    <span class="glyph">✦</span>
+    <span class="glyph">◈</span>
+    <span class="glyph">⬡</span>
+    <span class="glyph">◈</span>
+    <span class="glyph">✦</span>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//  DEVICE DETECTION — scale quality to device capability
+// ════════════════════════════════════════════════════════
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (window.innerWidth <= 768);
+const isLowEnd = isMobile && (navigator.hardwareConcurrency || 4) <= 4;
+
+// Particle budget based on device
+const CORE_N    = isLowEnd ? 1200 : isMobile ? 2000 : 3500;
+const ARM_N     = isLowEnd ?  800 : isMobile ? 1400 : 2400;
+const DUST_N    = isLowEnd ? 1500 : isMobile ? 3000 : 5000;
+const BG_N      = isLowEnd ? 2000 : isMobile ? 4000 : 7000;
+const ARM_COUNT = isLowEnd ? 4 : 6;
+const DP_INTERVAL  = isLowEnd ? 1200 : isMobile ? 900 : 600;
+const ORB_INTERVAL = isLowEnd ? 450  : isMobile ? 300 : 210;
+const SPK_INTERVAL = isLowEnd ? 250  : isMobile ? 160 : 110;
+
+// ════════════════════════════════════════════════════════
+//  THREE.JS  —  REALISTIC 3-D GALAXY
+// ════════════════════════════════════════════════════════
+const canvas3 = document.getElementById('three-canvas');
+const renderer = new THREE.WebGLRenderer({
+  canvas: canvas3,
+  antialias: !isLowEnd,
+  alpha: false,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.setClearColor(0x02000a, 1);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 3000);
+camera.position.set(0, 88, 162);
+camera.lookAt(0, 0, 0);
+
+function onResize(){
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
+// Android fires resize on keyboard open — debounce
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(onResize, 150); });
+
+// ── glowing circle sprite texture ──
+const _texCache = {};
+function makeTex(hex='#ffffff', sz=64){
+  if(_texCache[hex+sz]) return _texCache[hex+sz];
+  const c = document.createElement('canvas');
+  c.width = c.height = sz;
+  const x = c.getContext('2d'), r = sz/2;
+  const col = new THREE.Color(hex);
+  const rgb = `${Math.round(col.r*255)},${Math.round(col.g*255)},${Math.round(col.b*255)}`;
+  const g = x.createRadialGradient(r,r,0,r,r,r);
+  g.addColorStop(0,   `rgba(${rgb},1)`);
+  g.addColorStop(.28, `rgba(${rgb},.85)`);
+  g.addColorStop(.6,  `rgba(${rgb},.3)`);
+  g.addColorStop(1,   `rgba(${rgb},0)`);
+  x.fillStyle = g; x.fillRect(0,0,sz,sz);
+  const t = new THREE.CanvasTexture(c);
+  _texCache[hex+sz] = t;
+  return t;
+}
+
+const SCOLS = ['#b8d4ff','#d0e8ff','#ffffff','#fff8e0','#ffe8a0','#ffcc80','#ff9966','#e8c87a','#f08cba','#a8d8ff'];
+function rc(){ return SCOLS[Math.floor(Math.random()*SCOLS.length)]; }
+function rnd(a,b){ return a + Math.random()*(b-a); }
+
+const GALAXY = new THREE.Group();
+scene.add(GALAXY);
+
+// shared material (re-use to save GPU mem)
+const starMat = new THREE.PointsMaterial({
+  size:2.0, sizeAttenuation:true, vertexColors:true,
+  map:makeTex('#ffffff'), transparent:true, opacity:.9,
+  depthWrite:false, blending:THREE.AdditiveBlending
+});
+const armMat = new THREE.PointsMaterial({
+  size:1.5, sizeAttenuation:true, vertexColors:true,
+  map:makeTex('#ffffff'), transparent:true, opacity:.86,
+  depthWrite:false, blending:THREE.AdditiveBlending
+});
+
+// ── Galactic Bulge ──
+(()=>{
+  const N=CORE_N, pos=new Float32Array(N*3), col=new Float32Array(N*3), sz=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const r=Math.pow(Math.random(),2.2)*24;
+    const t=Math.random()*Math.PI*2, p=(Math.random()-.5)*Math.PI*.22;
+    pos[i*3]  =Math.cos(t)*Math.cos(p)*r;
+    pos[i*3+1]=Math.sin(p)*r*.38;
+    pos[i*3+2]=Math.sin(t)*Math.cos(p)*r;
+    const c=new THREE.Color(Math.random()<.6?'#fff6e0':'#ffe8c0');
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+    sz[i]=Math.random()*3+1.2;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  GALAXY.add(new THREE.Points(geo, starMat.clone()));
+})();
+
+// ── Core halos ──
+[[14,'#fff3c0',.08],[30,'#b898ff',.042],[50,'#203090',.024]].forEach(([r,c,op])=>{
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(r,16,16),
+    new THREE.MeshBasicMaterial({color:new THREE.Color(c),transparent:true,opacity:op,
+      blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  GALAXY.add(m);
+});
+
+// ── Spiral Arms ──
+function buildArm(baseAngle){
+  const N=ARM_N, pos=new Float32Array(N*3), col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const t=i/N, r=10+t*135, angle=baseAngle+t*Math.PI*3.0;
+    const spread=(Math.random()-.5)*2*Math.pow(t,.5)*12;
+    const vert=(Math.random()-.5)*4*(1-t*.6);
+    pos[i*3]  =Math.cos(angle)*r + Math.cos(angle+Math.PI/2)*spread;
+    pos[i*3+1]=vert;
+    pos[i*3+2]=Math.sin(angle)*r + Math.sin(angle+Math.PI/2)*spread;
+    const c=new THREE.Color(rc());
+    if(t<.2)       c.lerp(new THREE.Color('#fffad0'),.4);
+    else if(t>.7)  c.lerp(new THREE.Color('#88aaff'),.3);
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  return new THREE.Points(geo, armMat.clone());
+}
+// Major arms
+for(let a=0;a<4;a++) GALAXY.add(buildArm((a/4)*Math.PI*2));
+// Minor arms
+if(!isLowEnd){
+  for(let a=0;a<2;a++) GALAXY.add(buildArm((a/2)*Math.PI*2+Math.PI*.25));
+}
+
+// ── Dust lanes ──
+(()=>{
+  const N=DUST_N, pos=new Float32Array(N*3), col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const t=Math.random(), aBase=(Math.floor(Math.random()*4)/4)*Math.PI*2;
+    const r=6+t*120, ang=aBase+t*Math.PI*2.8+(Math.random()-.5)*.9;
+    const sc=(Math.random()-.5)*14;
+    pos[i*3]  =Math.cos(ang)*r+sc*.44;
+    pos[i*3+1]=(Math.random()-.5)*3.2;
+    pos[i*3+2]=Math.sin(ang)*r+sc*.44;
+    const c=new THREE.Color(Math.random()<.5?'#5010a0':'#102070');
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  GALAXY.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size:4.0, sizeAttenuation:true, vertexColors:true,
+    map:makeTex('#7733cc',64), transparent:true, opacity:.09,
+    depthWrite:false, blending:THREE.AdditiveBlending
+  })));
+})();
+
+// ── Nebula blobs ──
+[
+  {p:[58,5,32],  c:'#8b20c9',s:30,o:.072},
+  {p:[-62,-4,48],c:'#1a50c0',s:26,o:.062},
+  {p:[22,9,-72], c:'#c03060',s:34,o:.062},
+  {p:[-42,4,-52],c:'#20a0c0',s:22,o:.052},
+  {p:[85,-2,-18],c:'#a020c0',s:20,o:.048},
+].forEach(d=>{
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(d.s,12,12),
+    new THREE.MeshBasicMaterial({color:new THREE.Color(d.c),transparent:true,opacity:d.o,
+      blending:THREE.AdditiveBlending,depthWrite:false})
+  );
+  m.position.set(...d.p);
+  scene.add(m);
+});
+
+// ── Background star sphere ──
+(()=>{
+  const N=BG_N, pos=new Float32Array(N*3), col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const t=Math.random()*Math.PI*2, p=Math.acos(2*Math.random()-1), r=420+Math.random()*700;
+    pos[i*3]=r*Math.sin(p)*Math.cos(t); pos[i*3+1]=r*Math.sin(p)*Math.sin(t); pos[i*3+2]=r*Math.cos(p);
+    const c=new THREE.Color(rc());
+    col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    size:.7, sizeAttenuation:true, vertexColors:true,
+    map:makeTex('#ffffff'), transparent:true, opacity:.6,
+    depthWrite:false, blending:THREE.AdditiveBlending
+  })));
+})();
+
+// ── Camera orbit + render loop ──
+let camAngle=0, camNudge=0, camTilt=0, targetNudge=0, tiltNudge=0;
+let lastTime=0;
+
+// Mouse (desktop)
+document.addEventListener('mousemove', e=>{
+  targetNudge = (e.clientX/innerWidth-.5)*.35;
+  tiltNudge   = (e.clientY/innerHeight-.5)*.12;
+});
+// Touch (mobile) — gyro-like parallax via touch drag
+document.addEventListener('touchmove', e=>{
+  const t = e.touches[0];
+  targetNudge = (t.clientX/innerWidth-.5)*.25;
+  tiltNudge   = (t.clientY/innerHeight-.5)*.1;
+},{passive:true});
+
+function animate(now=0){
+  requestAnimationFrame(animate);
+  const dt = Math.min((now-lastTime)/16.67, 3); // clamp delta (tab background)
+  lastTime = now;
+
+  GALAXY.rotation.y += .00075 * dt;
+  camAngle           += .00042 * dt;
+  camNudge += (targetNudge - camNudge) * .012 * dt;
+  camTilt  += (tiltNudge  - camTilt ) * .012 * dt;
+
+  const a = camAngle + camNudge;
+  camera.position.set(Math.cos(a)*165, 84+camTilt*22, Math.sin(a)*165);
+  camera.lookAt(0,1,0);
+  renderer.render(scene, camera);
+}
+animate();
+
+// ════════════════════════════════════════════════════════
+//  CSS FLOATING DPs + ORBS + SPARKLES
+// ════════════════════════════════════════════════════════
+const dpImages = [
+  'https://i.pravatar.cc/70?img=1','https://i.pravatar.cc/70?img=5',
+  'https://i.pravatar.cc/70?img=8','https://i.pravatar.cc/70?img=14',
+  'https://i.pravatar.cc/70?img=17','https://i.pravatar.cc/70?img=23',
+  'https://i.pravatar.cc/70?img=29','https://i.pravatar.cc/70?img=36',
+  'https://i.pravatar.cc/70?img=41','https://i.pravatar.cc/70?img=45',
+  'https://i.pravatar.cc/70?img=52','https://i.pravatar.cc/70?img=58',
+];
+const glows = ['rgba(232,200,122','rgba(240,140,186','rgba(157,111,255','rgba(168,216,255','rgba(255,220,180'];
+const dpF = document.getElementById('dpfield');
+const spF = document.getElementById('sparklefield');
+function ri(a,b){ return Math.floor(rnd(a,b)); }
+
+// cap DOM nodes to avoid memory pressure on mobile
+let dpCount=0, orbCount=0, spkCount=0;
+const MAX_DP=isLowEnd?6:isMobile?10:18;
+const MAX_ORB=isLowEnd?14:isMobile?22:40;
+const MAX_SPK=isLowEnd?25:isMobile?45:80;
+
+function spawnDP(){
+  if(dpCount>=MAX_DP) return;
+  dpCount++;
+  const el=document.createElement('div');
+  el.className='dpbub';
+  const sz=rnd(28,52), x=rnd(3,95), dur=rnd(12,26), delay=rnd(0,4);
+  const dx=rnd(-70,70), op=rnd(.25,.6), g=glows[ri(0,glows.length)];
+  el.style.cssText=`left:${x}vw;bottom:${-sz-10}px;width:${sz}px;height:${sz}px;
+    --dx:${dx}px;--op:${op};animation-duration:${dur}s;animation-delay:${delay}s;
+    box-shadow:0 0 ${sz*.55}px ${sz*.14}px ${g},.32),0 0 ${sz*1.1}px ${g},.13),inset 0 0 ${sz*.2}px rgba(255,255,255,.18);
+    border:1.5px solid ${g},.38);`;
+  const img=document.createElement('img');
+  img.src=dpImages[ri(0,dpImages.length)];
+  img.style.cssText='width:100%;height:100%;border-radius:50%;object-fit:cover;';
+  img.loading='lazy';
+  el.appendChild(img); dpF.appendChild(el);
+  setTimeout(()=>{ el.remove(); dpCount--; },(dur+delay+2)*1000);
+}
+function spawnOrb(){
+  if(orbCount>=MAX_ORB) return;
+  orbCount++;
+  const el=document.createElement('div');
+  el.className='dpbub';
+  const sz=rnd(4,16), x=rnd(1,99), dur=rnd(8,18), delay=rnd(0,3);
+  const dx=rnd(-45,45), op=rnd(.3,.75), g=glows[ri(0,glows.length)];
+  el.style.cssText=`left:${x}vw;bottom:${-sz-10}px;width:${sz}px;height:${sz}px;
+    --dx:${dx}px;--op:${op};animation-duration:${dur}s;animation-delay:${delay}s;
+    background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.95),${g},.7),transparent);
+    box-shadow:0 0 ${sz*2}px ${g},.48),0 0 ${sz*4}px ${g},.2);`;
+  dpF.appendChild(el);
+  setTimeout(()=>{ el.remove(); orbCount--; },(dur+delay+2)*1000);
+}
+function spawnSpk(){
+  if(spkCount>=MAX_SPK) return;
+  spkCount++;
+  const el=document.createElement('div');
+  el.className='sparkle';
+  const s=rnd(1.5,5), g=glows[ri(0,glows.length)], dur=rnd(2,6);
+  const vx=rnd(-50,50), vy=rnd(-75,-18);
+  el.style.cssText=`left:${rnd(5,95)}vw;top:${rnd(5,95)}vh;
+    width:${s}px;height:${s}px;background:${g},.88);
+    box-shadow:0 0 ${s*3}px ${g},.55);
+    --vx:${vx};--vy:${vy};animation-duration:${dur}s;animation-delay:${rnd(0,2.5)}s;`;
+  spF.appendChild(el);
+  setTimeout(()=>{ el.remove(); spkCount--; },(dur+4)*1000);
+}
+
+setInterval(spawnDP,  DP_INTERVAL);
+setInterval(spawnOrb, ORB_INTERVAL);
+setInterval(spawnSpk, SPK_INTERVAL);
+// Initial batch
+for(let i=0;i<(isMobile?8:20);i++)  setTimeout(spawnDP,  i*180);
+for(let i=0;i<(isMobile?18:45);i++) setTimeout(spawnOrb, i*60);
+for(let i=0;i<(isMobile?35:90);i++) setTimeout(spawnSpk, i*80);
+
+// Shooting stars
+function shootStar(){
+  const el=document.createElement('div');
+  const top=rnd(3,55), len=rnd(100,340), dur=rnd(.5,1.2), angle=rnd(-20,20), distX=rnd(600,1300);
+  el.style.cssText=`position:fixed;z-index:4;
+    top:${top}vh;left:${rnd(-5,20)}vw;width:${len}px;height:2px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.88),rgba(232,200,122,.7),transparent);
+    border-radius:100%;pointer-events:none;
+    transform:rotate(${angle}deg);opacity:0;
+    transition:transform ${dur}s linear,opacity ${dur*.5}s ease;`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>{
+    el.style.opacity='1';
+    el.style.transform=`rotate(${angle}deg) translateX(${distX}px)`;
+  });
+  setTimeout(()=>el.style.opacity='0', dur*700);
+  setTimeout(()=>el.remove(), dur*1000+400);
+}
+setInterval(shootStar, isMobile ? 3500 : 2700);
+setTimeout(shootStar, 1000);
+
+// ════════════════════════════════════════════════════════
+//  SOUND ENGINE  (Web Audio API)
+// ════════════════════════════════════════════════════════
+const ACtx = window.AudioContext || window.webkitAudioContext;
+let actx=null, sOn=true, ambNodes=[];
+
+function initAudio(){
+  if(actx) return;
+  try{
+    actx = new ACtx();
+    // Android Chrome requires resume after user gesture
+    if(actx.state==='suspended') actx.resume();
+    buildAmbient();
+  }catch(e){ console.warn('Audio not available'); }
+}
+
+function buildAmbient(){
+  if(!actx) return;
+  [[27.5,'sine',.02],[55,'sine',.015],[82.5,'triangle',.009],
+   [110,'sine',.007],[220,'triangle',.004],[440,'sine',.003]].forEach(([f,t,v],i)=>{
+    const osc=actx.createOscillator(), gain=actx.createGain(), filt=actx.createBiquadFilter();
+    filt.type='lowpass'; filt.frequency.value=600+i*80;
+    osc.type=t; osc.frequency.value=f;
+    osc.frequency.setValueAtTime(f,actx.currentTime);
+    osc.frequency.linearRampToValueAtTime(f*1.007,actx.currentTime+12+i*3);
+    osc.frequency.linearRampToValueAtTime(f,actx.currentTime+24+i*3);
+    gain.gain.value=0;
+    gain.gain.linearRampToValueAtTime(v,actx.currentTime+4+i*.5);
+    osc.connect(filt); filt.connect(gain); gain.connect(actx.destination);
+    osc.start();
+    ambNodes.push({osc,gain,base:v});
+  });
+  [1760,2093,2637].forEach((f,i)=>{
+    const osc=actx.createOscillator(), gain=actx.createGain();
+    osc.type='sine'; osc.frequency.value=f;
+    gain.gain.value=0;
+    gain.gain.linearRampToValueAtTime(.0013,actx.currentTime+6+i);
+    osc.connect(gain); gain.connect(actx.destination); osc.start();
+    ambNodes.push({osc,gain,base:.0013});
+  });
+  pulseHeart();
+}
+function pulseHeart(){
+  if(!actx||!sOn){ setTimeout(pulseHeart,3500); return; }
+  try{
+    const osc=actx.createOscillator(), g=actx.createGain();
+    osc.type='sine'; osc.frequency.value=36;
+    g.gain.setValueAtTime(0,actx.currentTime);
+    g.gain.linearRampToValueAtTime(.046,actx.currentTime+.45);
+    g.gain.linearRampToValueAtTime(0,actx.currentTime+2.8);
+    osc.connect(g); g.connect(actx.destination);
+    osc.start(); osc.stop(actx.currentTime+2.8);
+  }catch(e){}
+  setTimeout(pulseHeart, 3600+Math.random()*2400);
+}
+function playTwinkle(){
+  if(!actx||!sOn) return;
+  try{
+    const sc=[261.63,329.63,392,493.88,523.25,659.25,784,987.77,1046.5];
+    const f=sc[ri(0,sc.length)];
+    const osc=actx.createOscillator(), g=actx.createGain(), pan=actx.createStereoPanner();
+    osc.type='sine'; osc.frequency.value=f; pan.pan.value=rnd(-1,1);
+    g.gain.setValueAtTime(0,actx.currentTime);
+    g.gain.linearRampToValueAtTime(.018,actx.currentTime+.06);
+    g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+1.3);
+    osc.connect(g); g.connect(pan); pan.connect(actx.destination);
+    osc.start(); osc.stop(actx.currentTime+1.5);
+  }catch(e){}
+}
+setInterval(()=>{ if(sOn) playTwinkle(); }, 1500);
+
+function playCrystal(x){
+  if(!actx||!sOn) return;
+  try{
+    [1047,1319,1568,2093,2637].forEach((f,i)=>{
+      const osc=actx.createOscillator(), g=actx.createGain(), pan=actx.createStereoPanner();
+      osc.type='sine'; osc.frequency.value=f;
+      pan.pan.value=(x/innerWidth)*2-1;
+      g.gain.setValueAtTime(0,actx.currentTime+i*.05);
+      g.gain.linearRampToValueAtTime(.05,actx.currentTime+i*.05+.04);
+      g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+i*.05+.5);
+      osc.connect(g); g.connect(pan); pan.connect(actx.destination);
+      osc.start(actx.currentTime+i*.05);
+      osc.stop(actx.currentTime+i*.05+.65);
+    });
+  }catch(e){}
+}
+
+document.getElementById('snd').addEventListener('click', ()=>{
+  initAudio();
+  sOn = !sOn;
+  document.getElementById('snd').textContent = sOn ? '🔊' : '🔇';
+  if(!actx) return;
+  ambNodes.forEach(n=>{
+    try{
+      n.gain.gain.cancelScheduledValues(actx.currentTime);
+      n.gain.gain.linearRampToValueAtTime(sOn?n.base:0, actx.currentTime+1);
+    }catch(e){}
+  });
+});
+
+// ════════════════════════════════════════════════════════
+//  CURSOR  (desktop only)
+// ════════════════════════════════════════════════════════
+const cur  = document.getElementById('cur');
+const cur2 = document.getElementById('cur2');
+let mx=0, my=0, tx=0, ty=0;
+document.addEventListener('mousemove', e=>{
+  mx=e.clientX; my=e.clientY;
+  cur.style.left=mx+'px'; cur.style.top=my+'px';
+});
+setInterval(()=>{
+  tx += (mx-tx)*.18; ty += (my-ty)*.18;
+  cur2.style.left=tx+'px'; cur2.style.top=ty+'px';
+}, 16);
+
+// ════════════════════════════════════════════════════════
+//  CLICK / TAP SPARKS
+// ════════════════════════════════════════════════════════
+function doSparks(px, py){
+  initAudio();
+  playCrystal(px);
+  const count = isMobile ? 12 : 20;
+  for(let i=0;i<count;i++){
+    const s=document.createElement('div');
+    s.className='cspark';
+    const ang=(i/count)*Math.PI*2, d=rnd(25,80), sz=rnd(3,9);
+    const g=glows[ri(0,glows.length)];
+    s.style.cssText=`left:${px}px;top:${py}px;width:${sz}px;height:${sz}px;
+      background:${g},.88);box-shadow:0 0 ${sz*2}px ${g},.65);
+      transition:transform ${rnd(.3,.75)}s cubic-bezier(.22,1,.36,1),opacity .48s;`;
+    document.body.appendChild(s);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      s.style.transform=`translate(calc(-50% + ${Math.cos(ang)*d}px),calc(-50% + ${Math.sin(ang)*d}px)) scale(0)`;
+      s.style.opacity='0';
+    }));
+    setTimeout(()=>s.remove(), 880);
+  }
+}
+document.addEventListener('click',   e=>doSparks(e.clientX, e.clientY));
+document.addEventListener('touchend', e=>{
+  const t=e.changedTouches[0];
+  doSparks(t.clientX, t.clientY);
+},{passive:true});
+
+// ── Card parallax (desktop mouse + mobile touch) ──
+const card = document.getElementById('card');
+document.addEventListener('mousemove', e=>{
+  const dx=(e.clientX/innerWidth-.5)*18, dy=(e.clientY/innerHeight-.5)*12;
+  card.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+});
+let tParallaxId;
+document.addEventListener('touchmove', e=>{
+  clearTimeout(tParallaxId);
+  const t=e.touches[0];
+  const dx=(t.clientX/innerWidth-.5)*10, dy=(t.clientY/innerHeight-.5)*7;
+  card.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+  // snap back after lift
+  tParallaxId=setTimeout(()=>card.style.transform='translate(-50%,-50%)',600);
+},{passive:true});
+
+// ── Date badge ──
+const db=document.getElementById('datebadge');
+if(db) db.textContent=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+// ── First-interaction audio unlock (required by Android Chrome) ──
+function unlockAudio(){
+  initAudio();
+  if(actx && actx.state==='suspended') actx.resume();
+}
+['click','touchstart','touchend'].forEach(ev=>
+  document.addEventListener(ev, unlockAudio, {once:true, passive:true})
+);
+</script>
+</body>
+</html>
